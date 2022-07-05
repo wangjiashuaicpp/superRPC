@@ -53,10 +53,42 @@ bool NetServer::init(std::string serverInfo)
     void *ctx = zmq_ctx_new ();
     void *server = zmq_socket (ctx, ZMQ_DEALER);
     int rc = zmq_bind (server, serverInfo.c_str());
+    m_pServer = server;
+}
+
+void NetServer::runServer()
+{
+    m_bRun = true;
 
 }
 
 void NetServer::serverLoop()
 {
+    zmq_pollitem_t items[] = {
+        { m_pServer, 0, ZMQ_POLLIN, 0}
+    };
 
+    while (m_bRun)
+    {
+        zmq_msg_t message;
+        zmq_poll(items, 1, -1);
+
+        if(items[0].revents & ZMQ_POLLIN)
+        {
+            zmq_msg_t(&message);
+            int size = zmq_msg_recv(&message, m_pServer, 0);
+            if(size == -1){
+                continue;
+            }
+            char *pData = (char*)malloc(size + 1);
+            memcpy(pData, zmq_msg_data(&message), size);
+            pData[size] = 0;
+            if(m_funcData){
+                m_funcData(pData,size);
+            }
+            free(pData);
+            zmq_msg_close(&message);
+        }
+    }
+    
 }

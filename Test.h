@@ -11,7 +11,16 @@
 #include <type_traits>
 typedef std::function<void(const char* data)> CALLFUNC;
 
-
+struct NetFunc
+{
+	long long index;
+	std::string strName;
+	char *pData;
+	int dataSize;
+	friend std::ostream & operator<<( std::ostream & os,const NetFunc & c);
+	friend std::istream & operator>>( std::istream & is,NetFunc & c);	
+};
+typedef std::function<void(NetFunc *pData)> NETFUNC;
 
 
 template <typename T> typename std::enable_if<std::is_same<T,std::string>::value,std::string>::type
@@ -169,13 +178,6 @@ std::istream & operator>>( std::istream & is,NetPack & c)
 	str.copy(c.pData,str.size());
 	return is;
 }
-struct NetFunc
-{
-	long long index;
-	std::string strName;
-	friend std::ostream & operator<<( std::ostream & os,const NetFunc & c);
-	friend std::istream & operator>>( std::istream & is,NetFunc & c);	
-};
 
 std::ostream & operator<<( std::ostream & os,const NetFunc & c)
 {
@@ -268,9 +270,19 @@ public :
 		insertBackFunc(funcinfo.index,func);
 	}
 
+	void sendData(const char* name, CALLFUNC func,char *pArg)
+	{
+		NetFunc funcinfo;
+		funcinfo.index = getNewFuncIndex();
+		funcinfo.strName = name;
+		funcinfo.pData = pArg;
+
+		m_mapReturnFunc[funcinfo.index] = func;
+	}
 	bool m_bSend;
 
-	std::map<std::string, CALLFUNC> m_mapRecvfunc;
+	std::map<std::string, NETFUNC> m_mapNetfunc;
+	std::map<long,CALLFUNC> m_mapReturnFunc;
 };
 
 class Test
@@ -278,6 +290,7 @@ class Test
 public:
 	virtual std::future<long> getdata(int i, long e, const char* p) { std::promise<long> r; return r.get_future(); };
 	virtual void getsis(int i, long e, const char* p) {};
+	virtual std::future<char*> getTest(char *pArg){};
 };
 
 template<typename T2> void funtest(T2& t)
@@ -313,6 +326,40 @@ public:
 		
 	}
 
+
+	std::future<char*> getTest(char *pArg) override
+	{
+		if (m_bSend) {
+			auto ff = std::make_shared<std::promise<char*>>();
+
+			auto Recdata = [this, ff](const char* data)
+			{
+				ff->set_value(decltype(ff->get_future().get())(data));
+			};
+			
+			this->sendData(__func__,Recdata,pArg);
+			//sendData(__func__, Recdata, arg...);
+			return ff->get_future();
+		}
+		else {
+			return Test::getTest(pArg);
+		}
+	
+	}
+
+	void initgetTest()
+	{
+		auto netFunc = [this](NetFunc *pArg) {
+			
+			std::future<char*> ff =  Test::getTest(pArg->pData);
+
+			auto r = ff.get();
+
+			backData(pArg->index,r);
+
+		};
+		m_mapNetfunc["getTest"] = netFunc;
+	}
 
 	CALLFUNC callfunc;
 	template<typename... T2>
@@ -390,7 +437,7 @@ template<typename T2, typename T3, typename T4> void get##func(const char *data,
 	void runnet(const char *data, T2 t, T3 tt, T4 ttt)
 	{
 		long long funcIndex = 0;
-		descArg(data, t, tt, ttt);
+		//descArg(data, t, tt, ttt);
 		std::future<long> ff =  this->getdata(t, tt, ttt);
 
 		ff.get();

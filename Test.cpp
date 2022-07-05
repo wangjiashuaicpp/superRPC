@@ -1,6 +1,7 @@
 
 #include "Test.h"
 #include <future>
+#include "rpcobject.h"
 
 
 
@@ -15,7 +16,10 @@ std::future<int> getFuture()
 {
 	std::promise<int> promiseObj;
 
-	promiseObj.set_value(int("xx"));
+	//promiseObj.set_value(int("xx"));
 	return promiseObj.get_future();
 }
 
+int main(int argc, char *argv[]) {
+	return 0;
+}
