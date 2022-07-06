@@ -2,7 +2,7 @@
 #include "Test.h"
 #include <future>
 #include "rpcobject.h"
-
+#include "rpcobjectmanager.h"
 
 
 void calldata(int i, int i2, int i3)

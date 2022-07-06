@@ -2,6 +2,10 @@
 #include <zmq.h>
 #include <cstdio>
 #include<cstring>
+#include <thread>
+namespace superrpc
+{
+
 NetClient::NetClient()
 {
     m_pServer = nullptr;
@@ -51,7 +55,7 @@ void NetClient::clientLoop()
 bool NetServer::init(std::string serverInfo)
 {
     void *ctx = zmq_ctx_new ();
-    void *server = zmq_socket (ctx, ZMQ_DEALER);
+    void *server = zmq_socket (ctx, ZMQ_ROUTER);
     int rc = zmq_bind (server, serverInfo.c_str());
     m_pServer = server;
 }
@@ -60,6 +64,27 @@ void NetServer::runServer()
 {
     m_bRun = true;
 
+    std::thread run([this](){
+        this->serverLoop();
+    });
+}
+
+bool NetServer::sendCreateObject(std::string strObjectName,std::int64_t objectID)
+{
+
+}
+
+void NetServer::endServer()
+{
+    m_bRun = false;
+    int size= 1;
+    zmq_msg_t msg;
+    zmq_msg_init_size (&msg,size);
+    void *pMsg = zmq_msg_data (&msg);
+    memcpy(pMsg,"0",size);
+
+    int rc = zmq_msg_send(&msg, m_pServer, 0);
+    zmq_msg_close(&msg);    
 }
 
 void NetServer::serverLoop()
@@ -71,24 +96,42 @@ void NetServer::serverLoop()
     while (m_bRun)
     {
         zmq_msg_t message;
+        zmq_msg_t address;
         zmq_poll(items, 1, -1);
 
         if(items[0].revents & ZMQ_POLLIN)
         {
-            zmq_msg_t(&message);
+            zmq_msg_init(&address);
+            zmq_msg_init(&message);
+            int addressSize = zmq_msg_recv(&address, m_pServer, 0);
+            if(addressSize == -1){
+                continue;
+            }            
             int size = zmq_msg_recv(&message, m_pServer, 0);
             if(size == -1){
                 continue;
             }
-            char *pData = (char*)malloc(size + 1);
+            
+            char *pData = (char*)malloc(size);
             memcpy(pData, zmq_msg_data(&message), size);
-            pData[size] = 0;
+            ZMQPack *pPack = (ZMQPack*)pData;
+            if(pPack->header == 0){
+                char *pData = (char*)malloc(addressSize);
+                memcpy(pData, zmq_msg_data(&message), size);
+                zmq_msg_t* pNewMsg = new zmq_msg_t;
+                zmq_msg_init(pNewMsg);
+                zmq_msg_copy(pNewMsg,&address);
+                m_mapClient[pData] = pNewMsg;
+            }
             if(m_funcData){
                 m_funcData(pData,size);
             }
             free(pData);
             zmq_msg_close(&message);
+            zmq_msg_close(&address);
         }
     }
     
+}
+
 }

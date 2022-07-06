@@ -1,6 +1,6 @@
 #ifndef SUPERRPC_H
 #define SUPERRPC_H
-
+#include <string>
 
 namespace superrpc
 {

@@ -17,24 +17,10 @@ namespace superrpc
         std::string strName;
         char *pData;
         int dataSize;
-        friend std::ostream & operator<<( std::ostream & os,const NetFunc & c);
-        friend std::istream & operator>>( std::istream & is,NetFunc & c);	
+
     };
     typedef std::function<void(NetFunc *pData)> NETFUNC;
-    std::ostream & operator<<( std::ostream & os,const NetFunc & c)
-    {
-        os << c.index;
-        os << c.strName;
-        
-        return os;
-    }
 
-    std::istream & operator>>( std::istream & is,NetFunc & c)
-    {
-        is >> c.index;
-        is >> c.strName;
-        return is;
-    }
     class RPCObject
     {
     public:

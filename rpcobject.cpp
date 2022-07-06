@@ -1,6 +1,6 @@
 #include "rpcobject.h"
 
-namespace namerpc
+namespace superrpc
 {
 
 
