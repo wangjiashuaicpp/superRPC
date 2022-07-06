@@ -69,22 +69,32 @@ void NetServer::runServer()
     });
 }
 
-bool NetServer::sendCreateObject(std::string strObjectName,std::int64_t objectID)
+bool NetServer::sendData(const char* pData,int size)
 {
+   sendData(1,pData,size);
+}
 
+bool NetServer::sendData(int header,const char* pData,int size)
+{
+    ZMQPack pack;
+    pack.header = header;
+    pack.dataSize = size;
+
+    int sendsize= sizeof(pack.header) + sizeof(pack.dataSize) + pack.dataSize;
+    zmq_msg_t msg;
+    zmq_msg_init_size (&msg,sendsize);
+    char *pMsg = (char*)zmq_msg_data (&msg);
+    memcpy(pMsg,&pack.header,sizeof(pack.header));
+    memcpy(pMsg+sizeof(pack.header),&pack.dataSize,sizeof(pack.dataSize));
+    memcpy(pMsg+sizeof(pack.header)+sizeof(pack.dataSize),pData,size);
+    int rc = zmq_msg_send(&msg, m_pServer, ZMQ_DONTWAIT);
+    zmq_msg_close(&msg); 
 }
 
 void NetServer::endServer()
 {
     m_bRun = false;
-    int size= 1;
-    zmq_msg_t msg;
-    zmq_msg_init_size (&msg,size);
-    void *pMsg = zmq_msg_data (&msg);
-    memcpy(pMsg,"0",size);
-
-    int rc = zmq_msg_send(&msg, m_pServer, 0);
-    zmq_msg_close(&msg);    
+    sendData(0,"0",sizeof(char));   
 }
 
 void NetServer::serverLoop()
@@ -112,10 +122,15 @@ void NetServer::serverLoop()
                 continue;
             }
             
-            char *pData = (char*)malloc(size);
-            memcpy(pData, zmq_msg_data(&message), size);
-            ZMQPack *pPack = (ZMQPack*)pData;
-            if(pPack->header == 0){
+            ZMQPack pack;
+            char *pData = (char*)zmq_msg_data(&message);
+            memcpy(&pack.header, pData, sizeof(pack.header));
+            memcpy(&pack.dataSize,pData+sizeof(pack.header),sizeof(pack.dataSize));
+            pack.pData = (char*)malloc(pack.dataSize);
+            memcpy(pack.pData,pData+ sizeof(pack.dataSize) + sizeof(pack.header),pack.dataSize);
+
+
+            if(pack.header == 0){
                 char *pData = (char*)malloc(addressSize);
                 memcpy(pData, zmq_msg_data(&message), size);
                 zmq_msg_t* pNewMsg = new zmq_msg_t;
@@ -124,9 +139,9 @@ void NetServer::serverLoop()
                 m_mapClient[pData] = pNewMsg;
             }
             if(m_funcData){
-                m_funcData(pData,size);
+                m_funcData(&pack,size);
             }
-            free(pData);
+            free(pack.pData);
             zmq_msg_close(&message);
             zmq_msg_close(&address);
         }

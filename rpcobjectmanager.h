@@ -6,16 +6,23 @@ namespace superrpc
 {
     class ObjectManager
     {
-    private:
-        
     public:
+        static ObjectManager* getInstance();
+    private:
         ObjectManager(/* args */);
+    public:
+        
         ~ObjectManager();
 
+        void setBServer(bool b){m_bServer = b;}
+
         void registerObject(PTR_RPCObject pObject);
+        void createClientObject(RPCObject* pObject);
         std::unordered_map<std::int64_t,PTR_RPCObject> m_mapObject;
 
         std::atomic<std::int64_t> m_objectIndex;
+
+        bool m_bServer;
     };
 };
 #endif

@@ -1,6 +1,14 @@
 #include "rpcobjectmanager.h"
 namespace superrpc
 {
+
+    
+    ObjectManager* ObjectManager::getInstance()
+    {
+        static ObjectManager g_objetManager;
+        return &g_objetManager;
+    }
+
     ObjectManager::ObjectManager(/* args */)
     {
         m_objectIndex = 1;
@@ -23,5 +31,10 @@ namespace superrpc
         m_mapObject[m_objectIndex] = pObject;
 
         
-    }  
+    }
+
+    void ObjectManager::createClientObject(RPCObject* pObject)
+    {
+        
+    }
 }

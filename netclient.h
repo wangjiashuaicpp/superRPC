@@ -13,11 +13,6 @@ struct ZMQPack
     char *pData;
     int dataSize;
 
-    int calcSize()
-    {
-        int size = sizeof(header) + dataSize + sizeof(dataSize);
-        return size;
-    }
 };
 
 class NetClient
@@ -40,9 +35,11 @@ public:
     void serverLoop();
     void endServer();
 
-    bool sendCreateObject(std::string strObjectName,std::int64_t objectID);
+    bool sendData(const char* pData,int size);
+    bool sendData(int header,const char* pData,int size);
+    void setFunCall(std::function<void(const ZMQPack* pData,int size)> call){m_funcData = call;};
     void *m_pServer;
-    std::function<void(const char* pData,int size)> m_funcData;
+    std::function<void(const ZMQPack* pData,int size)> m_funcData;
     std::unordered_map<std::string,zmq_msg_t*> m_mapClient;
     bool m_bRun;
 };

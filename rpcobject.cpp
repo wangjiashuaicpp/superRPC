@@ -3,6 +3,21 @@
 namespace superrpc
 {
 
+    std::ostream & operator<<( std::ostream & os,const RPCObject & c)
+    {
+        os << c.m_objectID;
+        os << c.m_clientID;
+        os << c.m_className;
+        return os;
+    }
+
+    std::istream & operator>>( std::istream & is,RPCObject & c)
+    {
+        is >> c.m_objectID;
+        is >> c.m_clientID;
+        is >> c.m_className;
+        return is;
+    }
 
     RPCObject::RPCObject(/* args */)
     {
@@ -30,6 +45,10 @@ namespace superrpc
         m_mapReturnFunc[funcinfo.index] = func;
     }
 
+    void RPCObject::sendData(const char* name, CALLFUNC func,std::vector<char> arg)
+    {
+
+    }
     void RPCObject::sendReturnData(std::int64_t index,char *pArg)
     {
 
