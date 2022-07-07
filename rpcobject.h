@@ -18,20 +18,37 @@ namespace superrpc
     struct NetFunc
     {
         std::int64_t index;
+        std::int64_t objectID;
         std::string strName;
-        char *pData;
-        std::vector<char> vecData;
+        std::string clientID;
+        std::string data;
         int dataSize;
         friend std::ostream & operator<<( std::ostream & os,const NetFunc & c);
-	    //friend std::istream & operator>>( std::istream & is,NetFunc & c);
+	    friend std::istream & operator>>( std::istream & is,NetFunc & c);
     };
     inline std::ostream & operator<<( std::ostream & os,const NetFunc & c)
     {
+        os << c.objectID;
         os << c.index;
         os << c.strName;
-        //os << c.vecData;
+        os << c.clientID;
+
+        //std::string strData(c.pData,c.dataSize);
+        os << c.data;
+        os << c.dataSize;
+
         return os;
     }    
+    inline std::istream & operator>>( std::istream & is,NetFunc & c)
+    {
+        is >> c.objectID;
+        is >> c.index;
+        is >> c.strName;
+        is >> c.clientID;
+        //std::string strData;
+        is >> c.data;
+        is >> c.dataSize;
+    }
     typedef std::function<void(NetFunc *pData)> NETFUNC;
 
     class RPCObject
@@ -41,9 +58,12 @@ namespace superrpc
         ~RPCObject();
 
         std::int64_t getNewFuncIndex();
-        void sendData(const char* name, CALLFUNC func,char *pArg);
-        void sendData(const char* name, CALLFUNC func,std::vector<char> arg);
-        void sendReturnData(std::int64_t index,char *pArg);
+        void sendData(const char* name, NETFUNC func,std::string &arg);
+        void sendData(const char* name, NETFUNC func,std::vector<char> arg);
+        void onNetFunc(NetFunc *pFunc);
+        void onNetReturn(NetFunc *pFunc);
+        
+        void sendReturnData(std::int64_t index,std::string &arg);
         void setObjectID(std::int64_t objectID){m_objectID = objectID;};
         void setClientID(std::string& str){m_clientID = str;};
         std::string getClientID(){return m_clientID;}
@@ -52,7 +72,7 @@ namespace superrpc
         std::string m_clientID;
         std::string m_className;
         bool m_bNetObject;
-        std::map<std::int64_t,CALLFUNC> m_mapReturnFunc;
+        std::map<std::int64_t,NETFUNC> m_mapReturnFunc;
         std::map<std::string, NETFUNC> m_mapNetfunc;
 
 
@@ -70,9 +90,33 @@ namespace superrpc
         ObjectTest (/* args */){};
         ~ObjectTest (){};
 
-        virtual std::future<char*> getTest(char *pArg){};
+        virtual std::future<std::string> getTest(std::string &arg){};
     };
     
+#define   SUPER_CLASS_BEGIN(className) class  superrpc##className{\
+public:\
+    using super = className;\
+    superrpc##className(){}\
+    virtual ~superrpc##className(){};\
+
+#define SUPER_FUNC_STRING(func)\
+    virtual std::future<std::string> func(std::string &arg)override {\
+        if (m_bNetObject) {\
+            auto ff = std::make_shared<std::promise<std::string>>();\
+            auto Recdata = [this, ff](NetFunc *pData)\
+            {\
+                ff->set_value(decltype(ff->get_future().get())(pData->data));\
+            };\
+            this->sendData(__func__,Recdata,arg);\
+            return ff->get_future();\
+        }\
+        else {\
+            return super::getTest(arg);\
+        }\
+    }\
+
+#define SUPER_CLASS_END\
+}\
 
     class superrpcObjectTest : public ObjectTest
     {
@@ -80,25 +124,25 @@ namespace superrpc
         superrpcObjectTest(/* args */){};
         ~superrpcObjectTest(){};
 
-        virtual std::future<char*> getTest(char *pArg){
+        virtual std::future<std::string> getTest(std::string &arg){
             if (m_bNetObject) {
-                auto ff = std::make_shared<std::promise<char*>>();
-                auto Recdata = [this, ff](const char* data)
+                auto ff = std::make_shared<std::promise<std::string>>();
+                auto Recdata = [this, ff](NetFunc *pData)
                 {
-                    ff->set_value(decltype(ff->get_future().get())(data));
+                    ff->set_value(decltype(ff->get_future().get())(pData->data));
                 };
-                this->sendData(__func__,Recdata,pArg);
+                this->sendData(__func__,Recdata,arg);
                 return ff->get_future();
             }
             else {
-                return ObjectTest::getTest(pArg);
+                return ObjectTest::getTest(arg);
             }
         };
         void initgetTest()
         {
             auto netFunc = [this](NetFunc *pArg) {
                 
-                std::future<char*> ff =  ObjectTest::getTest(pArg->pData);
+                std::future<std::string> ff =  ObjectTest::getTest(pArg->data);
                 auto r = ff.get();
                 sendReturnData(pArg->index,r);
 

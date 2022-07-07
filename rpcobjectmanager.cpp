@@ -37,4 +37,22 @@ namespace superrpc
     {
         
     }
+
+    void ObjectManager::onNetFunc(NetFunc *pFunc)
+    {
+        auto object = m_mapObject.find(pFunc->objectID);
+        if(object == m_mapObject.end()){
+            return;
+        }
+        object->second->onNetFunc(pFunc);
+    }
+
+    void ObjectManager::onNetReturn(NetFunc *pFunc)
+    {
+        auto object = m_mapObject.find(pFunc->objectID);
+        if(object == m_mapObject.end()){
+            return;
+        }
+        object->second->onNetReturn(pFunc);
+    }
 }

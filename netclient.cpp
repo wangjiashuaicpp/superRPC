@@ -11,13 +11,14 @@ NetClient::NetClient()
     m_pServer = nullptr;
 }
 
-bool NetClient::init(std::string serverInfo)
+bool NetClient::init(std::string serverInfo,std::string clientID)
 {
     void* ctx = zmq_ctx_new();
     void* server = zmq_socket(ctx, ZMQ_DEALER);
     if(zmq_connect(server, serverInfo.c_str()) != 0){
         return  false;
     }
+    zmq_setsockopt (server, ZMQ_IDENTITY, clientID.c_str(), clientID.size());
     m_pServer = server;
 
     return  true;
@@ -35,22 +36,71 @@ void NetClient::sendData(void* pData,int size)
 
 }
 
-void NetClient::clientLoop()
+bool NetClient::sendData(int header,const char* pData,int size)
 {
+    ZMQPack pack;
+    pack.header = header;
+    pack.dataSize = size;
+
+    int sendsize= sizeof(pack.header) + sizeof(pack.dataSize) + pack.dataSize;
     zmq_msg_t msg;
-    zmq_msg_init (&msg);
-    int size = zmq_msg_recv(&msg, m_pServer, ZMQ_DONTWAIT);
-    if(size == -1)
-        return ;
-
-    char *string = (char*)malloc(size + 1);
-    memcpy(string, zmq_msg_data(&msg), size);
-
-    zmq_msg_close(&msg);
-    string[size] = 0;
-    return ;
+    zmq_msg_init_size (&msg,sendsize);
+    char *pMsg = (char*)zmq_msg_data (&msg);
+    memcpy(pMsg,&pack.header,sizeof(pack.header));
+    memcpy(pMsg+sizeof(pack.header),&pack.dataSize,sizeof(pack.dataSize));
+    memcpy(pMsg+sizeof(pack.header)+sizeof(pack.dataSize),pData,size);
+    int rc = zmq_msg_send(&msg, m_pServer, ZMQ_DONTWAIT);
+    zmq_msg_close(&msg); 
 }
 
+void NetClient::clientLoop()
+{
+    zmq_pollitem_t items[] = {
+        { m_pServer, 0, ZMQ_POLLIN, 0}
+    };
+
+    while (m_bRun)
+    {
+        zmq_msg_t message;
+        zmq_poll(items, 1, -1);
+
+        if(items[0].revents & ZMQ_POLLIN)
+        {
+            zmq_msg_init(&message);         
+            int size = zmq_msg_recv(&message, m_pServer, 0);
+            if(size == -1){
+                continue;
+            }
+            
+            ZMQPack pack;
+            char *pData = (char*)zmq_msg_data(&message);
+            memcpy(&pack.header, pData, sizeof(pack.header));
+            memcpy(&pack.dataSize,pData+sizeof(pack.header),sizeof(pack.dataSize));
+            pack.pData = (char*)malloc(pack.dataSize);
+            memcpy(pack.pData,pData+ sizeof(pack.dataSize) + sizeof(pack.header),pack.dataSize);
+
+            if(m_funcData){
+                m_funcData(&pack,size);
+            }
+            free(pack.pData);
+            zmq_msg_close(&message);
+        }
+    }
+}
+void NetClient::runClient()
+{
+    m_bRun = true;
+
+    std::thread run([this](){
+        this->clientLoop();
+    });   
+}
+
+void NetClient::endClient()
+{
+    m_bRun = false;
+    sendData(0,"0",sizeof(char));  
+}
 
 bool NetServer::init(std::string serverInfo)
 {
@@ -89,6 +139,32 @@ bool NetServer::sendData(int header,const char* pData,int size)
     memcpy(pMsg+sizeof(pack.header)+sizeof(pack.dataSize),pData,size);
     int rc = zmq_msg_send(&msg, m_pServer, ZMQ_DONTWAIT);
     zmq_msg_close(&msg); 
+
+    return true;
+}
+
+bool NetServer::sendData(int header,const char* pData,int size,std::string clientID)
+{
+    auto client = m_mapClient.find(clientID);
+    if(client == m_mapClient.end()){
+        return false;
+    }
+    zmq_msg_send (client->second, m_pServer, ZMQ_SNDMORE);
+    ZMQPack pack;
+    pack.header = header;
+    pack.dataSize = size;
+
+    int sendsize= sizeof(pack.header) + sizeof(pack.dataSize) + pack.dataSize;
+    zmq_msg_t msg;
+    zmq_msg_init_size (&msg,sendsize);
+    char *pMsg = (char*)zmq_msg_data (&msg);
+    memcpy(pMsg,&pack.header,sizeof(pack.header));
+    memcpy(pMsg+sizeof(pack.header),&pack.dataSize,sizeof(pack.dataSize));
+    memcpy(pMsg+sizeof(pack.header)+sizeof(pack.dataSize),pData,size);
+    int rc = zmq_msg_send(&msg, m_pServer, ZMQ_DONTWAIT);
+    zmq_msg_close(&msg); 
+
+    return true;
 }
 
 void NetServer::endServer()

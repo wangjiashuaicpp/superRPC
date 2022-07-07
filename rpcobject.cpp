@@ -1,5 +1,5 @@
 #include "rpcobject.h"
-
+#include "superrpc.h"
 namespace superrpc
 {
 
@@ -30,31 +30,58 @@ namespace superrpc
     {
     }
 
+
+    void RPCObject::onNetFunc(NetFunc *pFunc)
+    {
+        auto func = m_mapNetfunc.find(pFunc->strName);
+        if(func == m_mapNetfunc.end()){
+            return;
+        }
+        func->second(pFunc);
+    }
+
+    void RPCObject::onNetReturn(NetFunc *pFunc)
+    {
+        auto func = m_mapReturnFunc.find(pFunc->index);
+        if(func == m_mapReturnFunc.end()){
+            return;
+        }
+        func->second(pFunc);
+        m_mapReturnFunc.erase(func);
+    }
+
     std::int64_t RPCObject::getNewFuncIndex()
     {
         m_funcindex++;
         return m_funcindex;
     }
-    void RPCObject::sendData(const char* name, CALLFUNC func,char *pArg)
+    void RPCObject::sendData(const char* name, NETFUNC func,std::string &arg)
     {
         NetFunc funcinfo;
+        funcinfo.objectID = m_objectID;
         funcinfo.index = getNewFuncIndex();
         funcinfo.strName = name;
-        funcinfo.pData = pArg;
+        funcinfo.clientID = m_clientID;
+        funcinfo.data = arg;
 
         m_mapReturnFunc[funcinfo.index] = func;
+        SendFuncCall(&funcinfo);
     }
 
-    void RPCObject::sendData(const char* name, CALLFUNC func,std::vector<char> arg)
+    void RPCObject::sendData(const char* name, NETFUNC func,std::vector<char> arg)
     {
 
     }
-    void RPCObject::sendReturnData(std::int64_t index,char *pArg)
-    {
 
+    void RPCObject::sendReturnData(std::int64_t index,std::string &arg)
+    {
+        NetFunc funcinfo;
+        funcinfo.objectID = m_objectID;
+        funcinfo.index = index;
+        funcinfo.clientID = m_clientID;
+        funcinfo.data = arg;
+        SendFuncReturn(&funcinfo);
     }
 
-
-      
 };
 

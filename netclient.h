@@ -20,11 +20,16 @@ class NetClient
 public:
     NetClient();
 
-    bool init(std::string serverInfo);
+    bool init(std::string serverInfo,std::string clientID);
     void sendData(void* pData,int size);
+    bool sendData(int header,const char* pData,int size);
     void clientLoop();
-
+    void runClient();
+    void endClient();    
+    void setFunCall(std::function<void(const ZMQPack* pData,int size)> call){m_funcData = call;};
+    std::function<void(const ZMQPack* pData,int size)> m_funcData;
     void *m_pServer;
+    bool m_bRun;
 };
 
 class NetServer
@@ -37,6 +42,7 @@ public:
 
     bool sendData(const char* pData,int size);
     bool sendData(int header,const char* pData,int size);
+    bool sendData(int header,const char* pData,int size,std::string clientID);
     void setFunCall(std::function<void(const ZMQPack* pData,int size)> call){m_funcData = call;};
     void *m_pServer;
     std::function<void(const ZMQPack* pData,int size)> m_funcData;

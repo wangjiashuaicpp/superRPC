@@ -18,6 +18,8 @@ namespace superrpc
 
         void registerObject(PTR_RPCObject pObject);
         void createClientObject(RPCObject* pObject);
+        void onNetFunc(NetFunc *pFunc);
+        void onNetReturn(NetFunc *pFunc);
         std::unordered_map<std::int64_t,PTR_RPCObject> m_mapObject;
 
         std::atomic<std::int64_t> m_objectIndex;
