@@ -21,6 +21,9 @@ std::future<int> getFuture()
 }
 
 int main(int argc, char *argv[]) {
+
+	superrpc::superrpcObjectTest ttt;
+	ttt.init();
 	return 0;
 }
 

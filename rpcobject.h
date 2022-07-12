@@ -50,6 +50,7 @@ namespace superrpc
         is >> c.dataSize;
     }
     typedef std::function<void(NetFunc *pData)> NETFUNC;
+    class RPCObject;
 
     class RPCObject
     {
@@ -62,10 +63,11 @@ namespace superrpc
         void sendData(const char* name, NETFUNC func,std::vector<char> arg);
         void onNetFunc(NetFunc *pFunc);
         void onNetReturn(NetFunc *pFunc);
-        
+        void init();
         void sendReturnData(std::int64_t index,std::string &arg);
         void setObjectID(std::int64_t objectID){m_objectID = objectID;};
         void setClientID(std::string& str){m_clientID = str;};
+        void addNetFunc(std::string strName,NETFUNC func){m_mapNetfunc[strName] = func;}
         std::string getClientID(){return m_clientID;}
         std::int64_t m_funcindex;
         std::int64_t m_objectID;
@@ -74,8 +76,9 @@ namespace superrpc
         bool m_bNetObject;
         std::map<std::int64_t,NETFUNC> m_mapReturnFunc;
         std::map<std::string, NETFUNC> m_mapNetfunc;
+        std::vector<std::function<void()> > m_arrInit;
 
-        NETFUNC tt = [this](superrpc::NetFunc *pData){};
+        //NETFUNC tt = [this](superrpc::NetFunc *pData){};
         
         friend std::ostream & operator<<( std::ostream & os,const RPCObject & c);
 	    friend std::istream & operator>>( std::istream & is,RPCObject & c);
@@ -84,7 +87,14 @@ namespace superrpc
     std::ostream & operator<<( std::ostream & os,const RPCObject & c);
     std::istream & operator>>( std::istream & is,RPCObject & c);
 
-
+    class ObjectRegister
+    {
+    public:
+        ObjectRegister(RPCObject *pObj,std::string strName, std::function<void()> func){
+            //pObj->m_arrInit.push_back(func);
+            func();
+        }
+    };
     class ObjectTest : public RPCObject
     {
     public:
@@ -150,8 +160,11 @@ public:\
                 return ObjectTest::getTest(arg);
             }
         };
+
+
         void initgetTest()
         {
+            std::cout << "initgetTest";
             auto netFunc = [this](NetFunc *pArg) {
                 
                 std::future<std::string> ff =  ObjectTest::getTest(pArg->data);
@@ -160,7 +173,11 @@ public:\
 
             };
             m_mapNetfunc["getTest"] = netFunc;
-        }        
+        };
+
+        ObjectRegister getTestRegister = ObjectRegister(this,"getTest",[this](){
+            this->initgetTest();
+            });
     };
     
 };

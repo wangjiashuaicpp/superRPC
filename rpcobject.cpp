@@ -24,10 +24,19 @@ namespace superrpc
         m_bNetObject = false;
         m_funcindex = 0;
         m_objectID = 0;
+
+
     }
 
     RPCObject::~RPCObject()
     {
+    }
+
+    void RPCObject::init()
+    {
+        for(auto &iter : m_arrInit){
+            iter();
+        }
     }
 
 
