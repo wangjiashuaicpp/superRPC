@@ -75,7 +75,8 @@ namespace superrpc
         std::map<std::int64_t,NETFUNC> m_mapReturnFunc;
         std::map<std::string, NETFUNC> m_mapNetfunc;
 
-
+        NETFUNC tt = [this](superrpc::NetFunc *pData){};
+        
         friend std::ostream & operator<<( std::ostream & os,const RPCObject & c);
 	    friend std::istream & operator>>( std::istream & is,RPCObject & c);
     };
@@ -93,17 +94,19 @@ namespace superrpc
         virtual std::future<std::string> getTest(std::string &arg){};
     };
     
-#define   SUPER_CLASS_BEGIN(className) class  superrpc##className{\
+#define   SUPER_CLASS_BEGIN(className) class  superrpc##className :public className,public superrpc::RPCObject{\
 public:\
     using super = className;\
-    superrpc##className(){}\
+    superrpc##className(){\
+        m_className = "superrpc"; m_className+= #className;\
+        }\
     virtual ~superrpc##className(){};\
 
 #define SUPER_FUNC_STRING(func)\
     virtual std::future<std::string> func(std::string &arg)override {\
         if (m_bNetObject) {\
             auto ff = std::make_shared<std::promise<std::string>>();\
-            auto Recdata = [this, ff](NetFunc *pData)\
+            auto Recdata = [this, ff](superrpc::NetFunc *pData)\
             {\
                 ff->set_value(decltype(ff->get_future().get())(pData->data));\
             };\
@@ -111,12 +114,21 @@ public:\
             return ff->get_future();\
         }\
         else {\
-            return super::getTest(arg);\
+            return super::func(arg);\
         }\
     }\
+    void init##func()\
+    {\
+        auto netFunc = [this](superrpc::NetFunc *pArg) {\
+            std::future<std::string> ff =  super::func(pArg->data);\
+            auto r = ff.get();\
+            sendReturnData(pArg->index,r);\
+        };\
+        m_mapNetfunc[#func] = netFunc;\
+    } \
 
-#define SUPER_CLASS_END\
-}\
+#define SUPER_CLASS_END(className)\
+};\
 
     class superrpcObjectTest : public ObjectTest
     {

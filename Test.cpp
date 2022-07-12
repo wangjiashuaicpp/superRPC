@@ -23,3 +23,13 @@ std::future<int> getFuture()
 int main(int argc, char *argv[]) {
 	return 0;
 }
+
+class User
+{
+public:
+	virtual std::future<std::string> getName(std::string &arg){}
+};
+
+SUPER_CLASS_BEGIN(User)
+SUPER_FUNC_STRING(getName)
+SUPER_CLASS_END(User)
