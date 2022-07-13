@@ -136,6 +136,7 @@ public:\
         };\
         m_mapNetfunc[#func] = netFunc;\
     } \
+    superrpc::ObjectRegister register##func = superrpc::ObjectRegister(this,#func,[this](){this->init##func();});\
 
 #define SUPER_CLASS_END(className)\
 };\
@@ -175,9 +176,8 @@ public:\
             m_mapNetfunc["getTest"] = netFunc;
         };
 
-        ObjectRegister getTestRegister = ObjectRegister(this,"getTest",[this](){
-            this->initgetTest();
-            });
+        ObjectRegister getTestRegister = 
+        ObjectRegister(this,"getTest",[this](){this->initgetTest();});
     };
     
 };

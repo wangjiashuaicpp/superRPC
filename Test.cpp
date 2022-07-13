@@ -31,8 +31,10 @@ class User
 {
 public:
 	virtual std::future<std::string> getName(std::string &arg){}
+	virtual std::future<std::string> setName(std::string &arg){}
 };
 
 SUPER_CLASS_BEGIN(User)
 SUPER_FUNC_STRING(getName)
+SUPER_FUNC_STRING(setName)
 SUPER_CLASS_END(User)
