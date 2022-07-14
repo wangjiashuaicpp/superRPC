@@ -5,6 +5,7 @@
 namespace superrpc
 {
     void OnNetData(const ZMQPack *pData,int size);
+    void OnNetClientData(const ZMQPack *pData,int size);
     enum MSGTYPE
     {
         MSG_REGISTEROBJECT = 2,
@@ -17,7 +18,7 @@ namespace superrpc
 
     bool InitClient(std::string serverInfo,std::string clientID)
     {
-        ObjectManager::getInstance()->setBServer(false);
+        ObjectManager::getClientInstance()->setBServer(false);
         auto pClient = std::make_shared<NetClient>();
         if(!pClient->init(serverInfo,clientID)){
             return false;
@@ -25,7 +26,7 @@ namespace superrpc
         g_netClient = pClient;
 
         pClient->setFunCall([](const ZMQPack *pData,int size){
-            OnNetData(pData,size);
+            OnNetClientData(pData,size);
         });        
         pClient->runClient();
     }
@@ -48,6 +49,37 @@ namespace superrpc
         return true;
     }
 
+    void OnNetClientData(const ZMQPack *pData,int size)
+    {
+        if(pData->header == MSG_REGISTEROBJECT){
+            std::string str(pData->pData,pData->dataSize);
+            std::stringbuf buf(str);
+		    std::istream out(&buf);
+            RPCObject object;
+            out >> object;
+            ObjectManager::getClientInstance()->createClientObject(&object);
+            
+            
+        }
+        else if(pData->header == MSG_CALLFUNC){
+            std::string str(pData->pData,pData->dataSize);
+            std::stringbuf buf(str);
+		    std::istream out(&buf);
+            NetFunc func;
+            out >> func;
+            ObjectManager::getClientInstance()->onNetFunc(&func);
+                 
+        }
+        else if(pData->header == MSG_FUNCRETURN){
+            std::string str(pData->pData,pData->dataSize);
+            std::stringbuf buf(str);
+		    std::istream out(&buf);
+            NetFunc func;
+            out >> func;
+            ObjectManager::getClientInstance()->onNetReturn(&func);
+                      
+        }
+    }
     void OnNetData(const ZMQPack *pData,int size)
     {
         if(pData->header == MSG_REGISTEROBJECT){
@@ -56,8 +88,13 @@ namespace superrpc
 		    std::istream out(&buf);
             RPCObject object;
             out >> object;
+            if(g_bServer){
+                ObjectManager::getInstance()->createClientObject(&object);
+            }
+            else{
+                ObjectManager::getClientInstance()->createClientObject(&object);
+            }
             
-            ObjectManager::getInstance()->createClientObject(&object);
         }
         else if(pData->header == MSG_CALLFUNC){
             std::string str(pData->pData,pData->dataSize);
@@ -65,7 +102,12 @@ namespace superrpc
 		    std::istream out(&buf);
             NetFunc func;
             out >> func;
-            ObjectManager::getInstance()->onNetFunc(&func);
+            if(g_bServer){
+                ObjectManager::getInstance()->onNetFunc(&func);
+            }
+            else{
+                ObjectManager::getClientInstance()->onNetFunc(&func);
+            }            
         }
         else if(pData->header == MSG_FUNCRETURN){
             std::string str(pData->pData,pData->dataSize);
@@ -73,7 +115,13 @@ namespace superrpc
 		    std::istream out(&buf);
             NetFunc func;
             out >> func;
-            ObjectManager::getInstance()->onNetReturn(&func);
+
+            if(g_bServer){
+                ObjectManager::getInstance()->onNetReturn(&func);
+            }
+            else{
+                ObjectManager::getClientInstance()->onNetReturn(&func);
+            }             
         }
     }
 

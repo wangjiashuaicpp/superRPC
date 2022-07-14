@@ -15,6 +15,7 @@ namespace superrpc
 {
     typedef std::function<void(const char* data)> CALLFUNC;
     
+    
     struct NetFunc
     {
         std::int64_t index;
@@ -87,6 +88,7 @@ namespace superrpc
     std::ostream & operator<<( std::ostream & os,const RPCObject & c);
     std::istream & operator>>( std::istream & is,RPCObject & c);
 
+    typedef std::function<RPCObject*(void)> CREATEFUNC;
     class ObjectRegister
     {
     public:
@@ -95,13 +97,21 @@ namespace superrpc
             func();
         }
     };
-    class ObjectTest : public RPCObject
+    class ObjectTest 
     {
     public:
         ObjectTest (/* args */){};
         ~ObjectTest (){};
 
         virtual std::future<std::string> getTest(std::string &arg){};
+    };
+    RPCObject* InitRPCObject(RPCObject *pObject,std::string strClientID);
+    
+    template <typename T>
+    T* CreateRPCObject(std::string strClientID)
+    {
+        T* pOBject = new T();
+        return (T*)InitRPCObject(pOBject,strClientID);
     };
     
 #define   SUPER_CLASS_BEGIN(className) class  superrpc##className :public className,public superrpc::RPCObject{\
@@ -141,7 +151,11 @@ public:\
 #define SUPER_CLASS_END(className)\
 };\
 
-    class superrpcObjectTest : public ObjectTest
+#define SUPER_CREATE(className,clientID)\
+    superrpc::CreateRPCObject<superrpc##className>(clientID);\
+
+
+    class superrpcObjectTest : public ObjectTest, public RPCObject
     {
     public:
         superrpcObjectTest(/* args */){};

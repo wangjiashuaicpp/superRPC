@@ -8,7 +8,11 @@ namespace superrpc
         static ObjectManager g_objetManager;
         return &g_objetManager;
     }
-
+    ObjectManager* ObjectManager::getClientInstance()
+    {
+        static ObjectManager g_objetClientManager;
+        return &g_objetClientManager;
+    }
     ObjectManager::ObjectManager(/* args */)
     {
         m_objectIndex = 1;

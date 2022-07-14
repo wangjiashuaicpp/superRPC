@@ -1,13 +1,14 @@
 #include "rpcobject.h"
 #include "superrpc.h"
+#include "rpcobjectmanager.h"
 namespace superrpc
 {
 
     std::ostream & operator<<( std::ostream & os,const RPCObject & c)
     {
-        os << c.m_objectID;
-        os << c.m_clientID;
-        os << c.m_className;
+        os << c.m_objectID << std::endl;
+        os << c.m_clientID << std::endl;
+        os << c.m_className << std::endl;
         return os;
     }
 
@@ -92,5 +93,18 @@ namespace superrpc
         SendFuncReturn(&funcinfo);
     }
 
+    static std::int64_t g_objectID = 0;
+    RPCObject* InitRPCObject(RPCObject *pObject,std::string strClientID)
+    {
+        g_objectID ++;
+        pObject->setClientID(strClientID);
+        pObject->setObjectID(g_objectID);
+
+        bool bServer = ObjectManager::getInstance()->getBServer();
+        pObject->m_bNetObject = bServer;
+
+        RegisterObject(pObject);
+        return pObject;
+    }
 };
 

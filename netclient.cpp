@@ -21,6 +21,7 @@ bool NetClient::init(std::string serverInfo,std::string clientID)
     zmq_setsockopt (server, ZMQ_IDENTITY, clientID.c_str(), clientID.size());
     m_pServer = server;
 
+    sendData(0,clientID.c_str(),clientID.size());
     return  true;
 }
 
@@ -94,6 +95,7 @@ void NetClient::runClient()
     std::thread run([this](){
         this->clientLoop();
     });   
+    run.detach();
 }
 
 void NetClient::endClient()
@@ -108,6 +110,8 @@ bool NetServer::init(std::string serverInfo)
     void *server = zmq_socket (ctx, ZMQ_ROUTER);
     int rc = zmq_bind (server, serverInfo.c_str());
     m_pServer = server;
+
+    return true;
 }
 
 void NetServer::runServer()
@@ -117,6 +121,8 @@ void NetServer::runServer()
     std::thread run([this](){
         this->serverLoop();
     });
+
+    run.detach();
 }
 
 bool NetServer::sendData(const char* pData,int size)
@@ -208,11 +214,13 @@ void NetServer::serverLoop()
 
             if(pack.header == 0){
                 char *pData = (char*)malloc(addressSize);
-                memcpy(pData, zmq_msg_data(&message), size);
+                //char *pMsg = (char*)zmq_msg_data(&address);
+                memcpy(pData, zmq_msg_data(&address), addressSize);
                 zmq_msg_t* pNewMsg = new zmq_msg_t;
                 zmq_msg_init(pNewMsg);
                 zmq_msg_copy(pNewMsg,&address);
-                m_mapClient[pData] = pNewMsg;
+                std::string strClientid(pack.pData,pack.dataSize);
+                m_mapClient[strClientid] = pNewMsg;
             }
             if(m_funcData){
                 m_funcData(&pack,size);

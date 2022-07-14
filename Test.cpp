@@ -3,7 +3,9 @@
 #include <future>
 #include "rpcobject.h"
 #include "rpcobjectmanager.h"
-
+#include "superrpc.h"
+#include <chrono>
+#include <thread>
 
 void calldata(int i, int i2, int i3)
 {
@@ -20,13 +22,6 @@ std::future<int> getFuture()
 	return promiseObj.get_future();
 }
 
-int main(int argc, char *argv[]) {
-
-	superrpc::superrpcObjectTest ttt;
-	ttt.init();
-	return 0;
-}
-
 class User
 {
 public:
@@ -38,3 +33,22 @@ SUPER_CLASS_BEGIN(User)
 SUPER_FUNC_STRING(getName)
 SUPER_FUNC_STRING(setName)
 SUPER_CLASS_END(User)
+
+int main(int argc, char *argv[]) {
+
+	superrpc::InitServer("tcp://*:9999");
+
+	superrpc::InitClient("tcp://127.0.0.1:9999","client1");
+
+	User *user = SUPER_CREATE(User,"client1");
+	std::string str;
+	user->getName(str);
+
+	while (1)
+	{
+		std::this_thread::sleep_for(std::chrono::seconds(5));
+	}
+	
+	return 0;
+}
+
