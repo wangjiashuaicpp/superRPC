@@ -29,14 +29,14 @@ namespace superrpc
     };
     inline std::ostream & operator<<( std::ostream & os,const NetFunc & c)
     {
-        os << c.objectID;
-        os << c.index;
-        os << c.strName;
-        os << c.clientID;
+        os << c.objectID << std::endl;
+        os << c.index  << std::endl;
+        os << c.strName  << std::endl;
+        os << c.clientID  << std::endl;
 
         //std::string strData(c.pData,c.dataSize);
-        os << c.data;
-        os << c.dataSize;
+        os << c.data  << std::endl;
+        os << c.dataSize  << std::endl;
 
         return os;
     }    
@@ -108,7 +108,7 @@ namespace superrpc
 
     
 
-    static std::unordered_map<std::string,CREATEFUNC> g_mapCreate;
+    
     RPCObject* InitRPCObject(RPCObject *pObject,std::string strClientID);
     void AddClassTemplate(std::string strClass,superrpc::CREATEFUNC func);
     template<class T>
@@ -119,8 +119,9 @@ namespace superrpc
             superrpc::CREATEFUNC func = [](){
                 return std::make_shared<T>();
             };
-            //AddClassTemplate(strClass,func);
-            g_mapCreate[strClass] = func;
+            AddClassTemplate(strClass,func);
+
+            //g_mapCreate.size();
         }
     };
     

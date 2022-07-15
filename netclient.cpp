@@ -127,10 +127,10 @@ void NetServer::runServer()
 
 bool NetServer::sendData(const char* pData,int size)
 {
-   sendData(1,pData,size);
+   sendData2(1,pData,size);
 }
 
-bool NetServer::sendData(int header,const char* pData,int size)
+bool NetServer::sendData2(int header,const char* pData,int size)
 {
     ZMQPack pack;
     pack.header = header;
@@ -155,6 +155,9 @@ bool NetServer::sendData(int header,const char* pData,int size,std::string clien
     if(client == m_mapClient.end()){
         return false;
     }
+    zmq_msg_t adress;
+    zmq_msg_init(&adress);
+    zmq_msg_copy(&adress,client->second);    
     zmq_msg_send (client->second, m_pServer, ZMQ_SNDMORE);
     ZMQPack pack;
     pack.header = header;
@@ -169,6 +172,7 @@ bool NetServer::sendData(int header,const char* pData,int size,std::string clien
     memcpy(pMsg+sizeof(pack.header)+sizeof(pack.dataSize),pData,size);
     int rc = zmq_msg_send(&msg, m_pServer, ZMQ_DONTWAIT);
     zmq_msg_close(&msg); 
+    zmq_msg_close(&adress);
 
     return true;
 }
@@ -176,7 +180,7 @@ bool NetServer::sendData(int header,const char* pData,int size,std::string clien
 void NetServer::endServer()
 {
     m_bRun = false;
-    sendData(0,"0",sizeof(char));   
+    sendData2(0,"0",sizeof(char));   
 }
 
 void NetServer::serverLoop()

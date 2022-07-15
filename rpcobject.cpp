@@ -107,17 +107,20 @@ namespace superrpc
         return pObject;
     }
 
-    
+    static std::shared_ptr<std::unordered_map<std::string,CREATEFUNC>> g_mapCreate = nullptr;
     void AddClassTemplate(std::string strClass,superrpc::CREATEFUNC func)
     {
-        //g_mapCreate[strClass] = func;
-        //g_mapCreate.insert(std::make_pair(strClass,func));
+        if(g_mapCreate == nullptr){
+            g_mapCreate = std::make_shared<std::unordered_map<std::string,CREATEFUNC>>();
+        }
+        
+        g_mapCreate->insert(std::make_pair(strClass,func));
     }
 
     PTR_RPCObject CreateRPCObjectByName(std::string className)
     {
-        auto findIter = g_mapCreate.find(className);
-        if(findIter != g_mapCreate.end()){
+        auto findIter = g_mapCreate->find(className);
+        if(findIter != g_mapCreate->end()){
             return findIter->second();
         }
 

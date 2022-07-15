@@ -41,7 +41,7 @@ public:
     void endServer();
 
     bool sendData(const char* pData,int size);
-    bool sendData(int header,const char* pData,int size);
+    bool sendData2(int header,const char* pData,int size);
     bool sendData(int header,const char* pData,int size,std::string clientID);
     void setFunCall(std::function<void(const ZMQPack* pData,int size)> call){m_funcData = call;};
     void *m_pServer;

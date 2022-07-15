@@ -49,8 +49,10 @@ namespace superrpc
         return true;
     }
 
+
     void OnNetClientData(const ZMQPack *pData,int size)
     {
+        std::cout << "OnNetClientData" << std::endl;
         if(pData->header == MSG_REGISTEROBJECT){
             std::string str(pData->pData,pData->dataSize);
             std::stringbuf buf(str);
@@ -146,7 +148,7 @@ namespace superrpc
         out << (*pFunc);
         std::string sendStr = buf.str();        
         if(g_netServer){
-            g_netServer->sendData((int)MSG_CALLFUNC,sendStr.c_str(),(int)sendStr.size());
+            g_netServer->sendData((int)MSG_CALLFUNC,sendStr.c_str(),(int)sendStr.size(),pFunc->clientID);
         }
         else{
             g_netClient->sendData((int)MSG_CALLFUNC,sendStr.c_str(),(int)sendStr.size());
@@ -160,7 +162,7 @@ namespace superrpc
         out << (*pFunc);
         std::string sendStr = buf.str();        
         if(g_netServer){
-            g_netServer->sendData((int)MSG_FUNCRETURN,sendStr.c_str(),(int)sendStr.size());
+            g_netServer->sendData((int)MSG_FUNCRETURN,sendStr.c_str(),(int)sendStr.size(),pFunc->clientID);
         }
         else{
             g_netClient->sendData((int)MSG_FUNCRETURN,sendStr.c_str(),(int)sendStr.size());

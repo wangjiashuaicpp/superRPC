@@ -40,6 +40,8 @@ namespace superrpc
     void ObjectManager::createClientObject(RPCObject* pObject)
     {
         auto pClientObject = CreateRPCObjectByName(pObject->m_className);
+        pClientObject->setClientID(pObject->m_clientID);
+        pClientObject->setObjectID(pObject->m_objectID);
         m_mapObject[pObject->m_objectID] = pClientObject;
     }
 
