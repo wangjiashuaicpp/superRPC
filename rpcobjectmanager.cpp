@@ -39,7 +39,8 @@ namespace superrpc
 
     void ObjectManager::createClientObject(RPCObject* pObject)
     {
-        
+        auto pClientObject = CreateRPCObjectByName(pObject->m_className);
+        m_mapObject[pObject->m_objectID] = pClientObject;
     }
 
     void ObjectManager::onNetFunc(NetFunc *pFunc)

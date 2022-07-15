@@ -88,7 +88,7 @@ namespace superrpc
     std::ostream & operator<<( std::ostream & os,const RPCObject & c);
     std::istream & operator>>( std::istream & is,RPCObject & c);
 
-    typedef std::function<RPCObject*(void)> CREATEFUNC;
+    typedef std::function<PTR_RPCObject(void)> CREATEFUNC;
     class ObjectRegister
     {
     public:
@@ -105,15 +105,34 @@ namespace superrpc
 
         virtual std::future<std::string> getTest(std::string &arg){};
     };
-    RPCObject* InitRPCObject(RPCObject *pObject,std::string strClientID);
+
     
+
+    static std::unordered_map<std::string,CREATEFUNC> g_mapCreate;
+    RPCObject* InitRPCObject(RPCObject *pObject,std::string strClientID);
+    void AddClassTemplate(std::string strClass,superrpc::CREATEFUNC func);
+    template<class T>
+    class TemplateRegister
+    {
+        public:
+        TemplateRegister(std::string strClass){
+            superrpc::CREATEFUNC func = [](){
+                return std::make_shared<T>();
+            };
+            //AddClassTemplate(strClass,func);
+            g_mapCreate[strClass] = func;
+        }
+    };
+    
+    PTR_RPCObject CreateRPCObjectByName(std::string className);
     template <typename T>
     T* CreateRPCObject(std::string strClientID)
     {
         T* pOBject = new T();
         return (T*)InitRPCObject(pOBject,strClientID);
     };
-    
+#define SUPER_CLASS_TOSTR(className) "superrpc"#className
+
 #define   SUPER_CLASS_BEGIN(className) class  superrpc##className :public className,public superrpc::RPCObject{\
 public:\
     using super = className;\
@@ -150,6 +169,7 @@ public:\
 
 #define SUPER_CLASS_END(className)\
 };\
+superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPER_CLASS_TOSTR(className));\
 
 #define SUPER_CREATE(className,clientID)\
     superrpc::CreateRPCObject<superrpc##className>(clientID);\

@@ -106,5 +106,22 @@ namespace superrpc
         RegisterObject(pObject);
         return pObject;
     }
+
+    
+    void AddClassTemplate(std::string strClass,superrpc::CREATEFUNC func)
+    {
+        //g_mapCreate[strClass] = func;
+        //g_mapCreate.insert(std::make_pair(strClass,func));
+    }
+
+    PTR_RPCObject CreateRPCObjectByName(std::string className)
+    {
+        auto findIter = g_mapCreate.find(className);
+        if(findIter != g_mapCreate.end()){
+            return findIter->second();
+        }
+
+        return nullptr;
+    }
 };
 
