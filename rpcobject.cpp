@@ -75,7 +75,8 @@ namespace superrpc
         funcinfo.data = arg;
 
         m_mapReturnFunc[funcinfo.index] = func;
-        SendFuncCall(&funcinfo);
+        //SendFuncCall(&funcinfo);
+        m_pManager->sendFuncCall(&funcinfo);
     }
 
     void RPCObject::sendData(const char* name, NETFUNC func,std::vector<char> arg)
@@ -90,7 +91,9 @@ namespace superrpc
         funcinfo.index = index;
         funcinfo.clientID = m_clientID;
         funcinfo.data = arg;
-        SendFuncReturn(&funcinfo);
+        funcinfo.dataSize = arg.size();
+        //SendFuncReturn(&funcinfo);
+        m_pManager->sendFuncReturn(&funcinfo);
     }
 
     static std::int64_t g_objectID = 0;
@@ -100,10 +103,10 @@ namespace superrpc
         pObject->setClientID(strClientID);
         pObject->setObjectID(g_objectID);
 
-        bool bServer = ObjectManager::getInstance()->getBServer();
-        pObject->m_bNetObject = bServer;
+        //bool bServer = ObjectManager::getInstance()->getBServer();
+        //pObject->m_bNetObject = bServer;
 
-        RegisterObject(pObject);
+        //RegisterNetObject(pObject);
         return pObject;
     }
 

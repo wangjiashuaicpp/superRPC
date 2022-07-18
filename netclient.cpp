@@ -37,7 +37,7 @@ void NetClient::sendData(void* pData,int size)
 
 }
 
-bool NetClient::sendData(int header,const char* pData,int size)
+bool NetClient::sendData(int header,const char* pData,int size,std::string clientID)
 {
     ZMQPack pack;
     pack.header = header;
@@ -158,7 +158,7 @@ bool NetServer::sendData(int header,const char* pData,int size,std::string clien
     zmq_msg_t adress;
     zmq_msg_init(&adress);
     zmq_msg_copy(&adress,client->second);    
-    zmq_msg_send (client->second, m_pServer, ZMQ_SNDMORE);
+    zmq_msg_send (&adress, m_pServer, ZMQ_SNDMORE);
     ZMQPack pack;
     pack.header = header;
     pack.dataSize = size;

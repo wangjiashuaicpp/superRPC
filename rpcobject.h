@@ -11,6 +11,7 @@
 #include <sstream>
 #include <fstream>
 #include <unordered_map>
+
 namespace superrpc
 {
     typedef std::function<void(const char* data)> CALLFUNC;
@@ -52,7 +53,7 @@ namespace superrpc
     }
     typedef std::function<void(NetFunc *pData)> NETFUNC;
     class RPCObject;
-
+    class ObjectManager;
     class RPCObject
     {
     public:
@@ -69,12 +70,15 @@ namespace superrpc
         void setObjectID(std::int64_t objectID){m_objectID = objectID;};
         void setClientID(std::string& str){m_clientID = str;};
         void addNetFunc(std::string strName,NETFUNC func){m_mapNetfunc[strName] = func;}
+        void setObjectManager(ObjectManager *pManager){ m_pManager = pManager;};
+
         std::string getClientID(){return m_clientID;}
         std::int64_t m_funcindex;
         std::int64_t m_objectID;
         std::string m_clientID;
         std::string m_className;
         bool m_bNetObject;
+        ObjectManager *m_pManager;
         std::map<std::int64_t,NETFUNC> m_mapReturnFunc;
         std::map<std::string, NETFUNC> m_mapNetfunc;
         std::vector<std::function<void()> > m_arrInit;
@@ -126,12 +130,7 @@ namespace superrpc
     };
     
     PTR_RPCObject CreateRPCObjectByName(std::string className);
-    template <typename T>
-    T* CreateRPCObject(std::string strClientID)
-    {
-        T* pOBject = new T();
-        return (T*)InitRPCObject(pOBject,strClientID);
-    };
+        
 #define SUPER_CLASS_TOSTR(className) "superrpc"#className
 
 #define   SUPER_CLASS_BEGIN(className) class  superrpc##className :public className,public superrpc::RPCObject{\
@@ -175,6 +174,11 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
 #define SUPER_CREATE(className,clientID)\
     superrpc::CreateRPCObject<superrpc##className>(clientID);\
 
+#define SUPER_CREATESERVER(className,clientID)\
+    superrpc::CreateServerRPCObject<superrpc##className>(clientID);\
+
+#define SUPER_CREATECLIENT(className,clientID)\
+    superrpc::CreateClientRPCObject<superrpc##className>(clientID);\
 
     class superrpcObjectTest : public ObjectTest, public RPCObject
     {

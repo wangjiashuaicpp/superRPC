@@ -25,8 +25,8 @@ std::future<int> getFuture()
 class User
 {
 public:
-	virtual std::future<std::string> getName(std::string &arg){}
-	virtual std::future<std::string> setName(std::string &arg){}
+	virtual std::future<std::string> getName(std::string &arg){std::promise<std::string> p; p.set_value("fdf"); return p.get_future();}
+	virtual std::future<std::string> setName(std::string &arg){std::promise<std::string> p; p.set_value("fdf"); return p.get_future();}
 };
 
 SUPER_CLASS_BEGIN(User)
@@ -37,13 +37,18 @@ SUPER_CLASS_END(User)
 int main(int argc, char *argv[]) {
 
 	superrpc::InitServer("tcp://*:9999");
-
+	std::this_thread::sleep_for(std::chrono::seconds(2));
 	superrpc::InitClient("tcp://127.0.0.1:9999","client1");
+	std::this_thread::sleep_for(std::chrono::seconds(2));
 
-	User *user = SUPER_CREATE(User,"client1");
+	auto user = SUPER_CREATE(User,"client1");
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 	std::string str;
-	user->getName(str);
-
+	auto get = user->getName(str);
+	auto str2 = get.get();
+	if(str2.size()){
+		std::cout << "dsf" << std::endl;
+	}
 	while (1)
 	{
 		std::this_thread::sleep_for(std::chrono::seconds(5));

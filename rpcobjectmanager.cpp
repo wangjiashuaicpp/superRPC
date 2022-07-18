@@ -1,4 +1,6 @@
 #include "rpcobjectmanager.h"
+#include "netclient.h"
+#include "superrpc.h"
 namespace superrpc
 {
 
@@ -30,7 +32,7 @@ namespace superrpc
             }
         }
 
-
+        pObject->setObjectManager(this);
         m_objectIndex ++;
         m_mapObject[m_objectIndex] = pObject;
 
@@ -40,6 +42,7 @@ namespace superrpc
     void ObjectManager::createClientObject(RPCObject* pObject)
     {
         auto pClientObject = CreateRPCObjectByName(pObject->m_className);
+        pClientObject->setObjectManager(this);
         pClientObject->setClientID(pObject->m_clientID);
         pClientObject->setObjectID(pObject->m_objectID);
         m_mapObject[pObject->m_objectID] = pClientObject;
@@ -61,5 +64,37 @@ namespace superrpc
             return;
         }
         object->second->onNetReturn(pFunc);
+    }
+
+    bool ObjectManager::sendFuncReturn(NetFunc *pFunc)
+    {
+        std::stringbuf buf;
+        std::ostream out(&buf);
+        out << (*pFunc);
+        std::string sendStr = buf.str();        
+        m_pNet->sendData((int)MSG_FUNCRETURN,sendStr.c_str(),(int)sendStr.size(),pFunc->clientID);    
+    }    
+
+    bool ObjectManager::sendFuncCall(NetFunc *pFunc)
+    {
+        std::stringbuf buf;
+        std::ostream out(&buf);
+        out << (*pFunc);
+        std::string sendStr = buf.str();        
+        m_pNet->sendData((int)MSG_CALLFUNC,sendStr.c_str(),(int)sendStr.size(),pFunc->clientID);
+
+    }
+
+    bool ObjectManager::registerNetObject(PTR_RPCObject pObject)
+    {
+        pObject->m_bNetObject = true;
+        pObject->setObjectManager(this);
+        m_mapObject[pObject->m_objectID] = pObject;
+        std::stringbuf buf;
+        std::ostream out(&buf);
+        out << (*pObject);
+        std::string sendStr = buf.str();
+        m_pNet->sendData((int)MSG_REGISTEROBJECT,sendStr.c_str(),(int)sendStr.size(),pObject->m_clientID);
+
     }
 }
