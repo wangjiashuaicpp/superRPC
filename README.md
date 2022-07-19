@@ -9,10 +9,23 @@ An encapsulation of RPC that enables developers to write code as usual, and the 
 class User
 {
 public:
-	virtual std::future<std::string> getName(std::string &arg){std::promise<std::string> p; p.set_value(m_Name); return p.get_future();}
-	virtual std::future<std::string> setName(std::string &arg){m_Name = arg; std::promise<std::string> p; p.set_value("fdf"); return p.get_future();}
+	virtual std::future<std::string> getName(std::string &arg){
+            std::promise<std::string> p; 
+            p.set_value(m_Name); 
+            return p.get_future();
+        }
+	virtual std::future<std::string> setName(std::string &arg){
+            m_Name = arg; 
+            std::promise<std::string> p; 
+            p.set_value("fdf"); 
+            return p.get_future();
+        }
 	virtual void excSome(){std::cout << "runsome" << std::endl;}
-	virtual std::future<std::int64_t> getLong(std::int64_t arg){std::promise<std::int64_t> p; p.set_value(100); return p.get_future();}
+	virtual std::future<std::int64_t> getLong(std::int64_t arg){
+            std::promise<std::int64_t> p; 
+            p.set_value(100); 
+            return p.get_future();
+        }
 	std::string m_Name;
 };
 
