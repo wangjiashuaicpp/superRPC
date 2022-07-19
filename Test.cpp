@@ -25,8 +25,10 @@ std::future<int> getFuture()
 class User
 {
 public:
-	virtual std::future<std::string> getName(std::string &arg){std::promise<std::string> p; p.set_value("fdf"); return p.get_future();}
-	virtual std::future<std::string> setName(std::string &arg){std::promise<std::string> p; p.set_value("fdf"); return p.get_future();}
+	virtual std::future<std::string> getName(std::string &arg){std::promise<std::string> p; p.set_value(m_Name); return p.get_future();}
+	virtual std::future<std::string> setName(std::string &arg){m_Name = arg; std::promise<std::string> p; p.set_value("fdf"); return p.get_future();}
+
+	std::string m_Name;
 };
 
 SUPER_CLASS_BEGIN(User)
@@ -43,7 +45,8 @@ int main(int argc, char *argv[]) {
 
 	auto user = SUPER_CREATE(User,"client1");
 	std::this_thread::sleep_for(std::chrono::seconds(1));
-	std::string str;
+	std::string str = "fdsffffffffffffffffffffff";
+	user->setName(str);
 	auto get = user->getName(str);
 	auto str2 = get.get();
 	if(str2.size()){

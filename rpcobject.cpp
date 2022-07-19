@@ -91,6 +91,7 @@ namespace superrpc
         funcinfo.index = index;
         funcinfo.clientID = m_clientID;
         funcinfo.data = arg;
+        funcinfo.strName = "return";
         funcinfo.dataSize = arg.size();
         //SendFuncReturn(&funcinfo);
         m_pManager->sendFuncReturn(&funcinfo);
