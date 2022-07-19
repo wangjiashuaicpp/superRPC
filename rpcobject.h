@@ -27,6 +27,9 @@ namespace superrpc
         int dataSize;
         friend std::ostream & operator<<( std::ostream & os,const NetFunc & c);
 	    friend std::istream & operator>>( std::istream & is,NetFunc & c);
+
+        std::int64_t toLong(){return std::atoll(data.c_str());}
+        void    packLong(std::int64_t arg){data = std::to_string(arg);dataSize = data.size();}
     };
     inline std::ostream & operator<<( std::ostream & os,const NetFunc & c)
     {
@@ -50,6 +53,7 @@ namespace superrpc
         //std::string strData;
         is >> c.data;
         is >> c.dataSize;
+        return is;
     }
     typedef std::function<void(NetFunc *pData)> NETFUNC;
     class RPCObject;
@@ -165,11 +169,59 @@ public:\
         };\
         m_mapNetfunc[#func] = netFunc;\
     } \
+    superrpc::ObjectRegister register##func = superrpc::ObjectRegister(this,#func,[this](){this->init##func();});
+
+#define SUPER_FUNC_VOID(func)\
+    virtual void func()override {\
+        if (m_bNetObject) {\
+            auto Recdata = [](superrpc::NetFunc *pData){};\
+            std::string strArg = "";\
+            this->sendData(__func__,Recdata,strArg);\
+        }\
+        else {\
+            return super::func();\
+        }\
+    }\
+    void init##func()\
+    {\
+        auto netFunc = [this](superrpc::NetFunc *pData) {\
+            super::func();\
+        };\
+        m_mapNetfunc[#func] = netFunc;\
+    } \
     superrpc::ObjectRegister register##func = superrpc::ObjectRegister(this,#func,[this](){this->init##func();});\
 
 #define SUPER_CLASS_END(className)\
 };\
 superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPER_CLASS_TOSTR(className));\
+
+#define SUPER_FUNC_LONG(func)\
+    virtual std::future<std::int64_t> func(std::int64_t arg)override {\
+        if (m_bNetObject) {\
+            auto ff = std::make_shared<std::promise<std::int64_t>>();\
+            auto Recdata = [this, ff](superrpc::NetFunc *pData)\
+            {\
+                ff->set_value(decltype(ff->get_future().get())(pData->toLong()));\
+            };\
+            std::string strArg = std::to_string(arg);\
+            this->sendData(__func__,Recdata,strArg);\
+            return ff->get_future();\
+        }\
+        else {\
+            return super::func(arg);\
+        }\
+    }\
+    void init##func()\
+    {\
+        auto netFunc = [this](superrpc::NetFunc *pArg) {\
+            std::future<std::int64_t> ff =  super::func(pArg->toLong());\
+            auto r = ff.get();\
+            std::string strArg = std::to_string(r);\
+            sendReturnData(pArg->index,strArg);\
+        };\
+        m_mapNetfunc[#func] = netFunc;\
+    } \
+    superrpc::ObjectRegister register##func = superrpc::ObjectRegister(this,#func,[this](){this->init##func();});
 
 #define SUPER_CREATE(className,clientID)\
     superrpc::CreateRPCObject<superrpc##className>(clientID);\

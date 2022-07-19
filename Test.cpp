@@ -27,13 +27,16 @@ class User
 public:
 	virtual std::future<std::string> getName(std::string &arg){std::promise<std::string> p; p.set_value(m_Name); return p.get_future();}
 	virtual std::future<std::string> setName(std::string &arg){m_Name = arg; std::promise<std::string> p; p.set_value("fdf"); return p.get_future();}
-
+	virtual void excSome(){std::cout << "runsome" << std::endl;}
+	virtual std::future<std::int64_t> getLong(std::int64_t arg){std::promise<std::int64_t> p; p.set_value(100); return p.get_future();}
 	std::string m_Name;
 };
 
 SUPER_CLASS_BEGIN(User)
 SUPER_FUNC_STRING(getName)
 SUPER_FUNC_STRING(setName)
+SUPER_FUNC_VOID(excSome)
+SUPER_FUNC_LONG(getLong)
 SUPER_CLASS_END(User)
 
 int main(int argc, char *argv[]) {
@@ -49,6 +52,10 @@ int main(int argc, char *argv[]) {
 	user->setName(str);
 	auto get = user->getName(str);
 	auto str2 = get.get();
+
+	user->excSome();
+
+	auto longdata = user->getLong(123).get();
 	if(str2.size()){
 		std::cout << "dsf" << std::endl;
 	}
