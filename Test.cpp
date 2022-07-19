@@ -7,29 +7,34 @@
 #include <chrono>
 #include <thread>
 
-void calldata(int i, int i2, int i3)
-{
-	Test2 tdata;
-	tdata.getdatarr(2, 3, "");
-	
-}
-
-std::future<int> getFuture()
-{
-	std::promise<int> promiseObj;
-
-	//promiseObj.set_value(int("xx"));
-	return promiseObj.get_future();
-}
-
 class User
 {
 public:
-	virtual std::future<std::string> getName(std::string &arg){std::promise<std::string> p; p.set_value(m_Name); return p.get_future();}
-	virtual std::future<std::string> setName(std::string &arg){m_Name = arg; std::promise<std::string> p; p.set_value("fdf"); return p.get_future();}
+	virtual std::future<std::string> getName(std::string &arg){
+			std::promise<std::string> p; 
+			p.set_value(m_Name); 
+			return p.get_future();
+		}
+	virtual std::future<std::string> setName(std::string &arg){
+			m_Name = arg; 
+			std::promise<std::string> p; 
+			p.set_value("fdf"); 
+			return p.get_future();
+		}
 	virtual void excSome(){std::cout << "runsome" << std::endl;}
-	virtual std::future<std::int64_t> getLong(std::int64_t arg){std::promise<std::int64_t> p; p.set_value(100); return p.get_future();}
+	
+	virtual std::future<std::int64_t> getLong(std::int64_t arg){
+			std::promise<std::int64_t> p; 
+			p.set_value(100); 
+			return p.get_future();
+		}
 	std::string m_Name;
+};
+
+class CallServer
+{
+public:
+	virtual void onOK(std::string &arg) {}
 };
 
 SUPER_CLASS_BEGIN(User)

@@ -97,6 +97,8 @@ namespace superrpc
     std::istream & operator>>( std::istream & is,RPCObject & c);
 
     typedef std::function<PTR_RPCObject(void)> CREATEFUNC;
+
+
     class ObjectRegister
     {
     public:
@@ -166,6 +168,27 @@ public:\
             std::future<std::string> ff =  super::func(pArg->data);\
             auto r = ff.get();\
             sendReturnData(pArg->index,r);\
+        };\
+        m_mapNetfunc[#func] = netFunc;\
+    } \
+    superrpc::ObjectRegister register##func = superrpc::ObjectRegister(this,#func,[this](){this->init##func();});
+
+#define SUPER_FUNC_VOID_STRING(func)\
+    virtual void func(std::string arg)override {\
+        if (m_bNetObject) {\
+            auto Recdata = [this](superrpc::NetFunc *pData)\
+            {\
+            };\
+            this->sendData(__func__,Recdata,arg);\
+        }\
+        else {\
+            return super::func(arg);\
+        }\
+    }\
+    void init##func()\
+    {\
+        auto netFunc = [this](superrpc::NetFunc *pArg) {\
+            super::func(pArg->data);\
         };\
         m_mapNetfunc[#func] = netFunc;\
     } \
