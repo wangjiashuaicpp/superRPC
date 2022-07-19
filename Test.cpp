@@ -40,15 +40,19 @@ SUPER_FUNC_LONG(getLong)
 SUPER_CLASS_END(User)
 
 int main(int argc, char *argv[]) {
-
+	//init main 
 	superrpc::InitServer("tcp://*:9999");
 	std::this_thread::sleep_for(std::chrono::seconds(2));
+
+	//init client
 	superrpc::InitClient("tcp://127.0.0.1:9999","client1");
 	std::this_thread::sleep_for(std::chrono::seconds(2));
 
+	//create User class from client1
 	auto user = SUPER_CREATE(User,"client1");
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 	std::string str = "fdsffffffffffffffffffffff";
+	//exc on client1
 	user->setName(str);
 	auto get = user->getName(str);
 	auto str2 = get.get();
