@@ -4,6 +4,8 @@
 
 An encapsulation of RPC that enables developers to write code as usual, and the program is automatically distributed and executed on the remote computer. It can be easily used in the development of client-side massive data computing cluster, and reduce the problem of distributed programming in programming.
 
+``` cpp
+
 class User
 {
 public:
@@ -53,3 +55,5 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
+
+``` 
