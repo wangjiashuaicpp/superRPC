@@ -68,19 +68,18 @@ namespace superrpc
 
     bool ObjectManager::sendFuncReturn(NetFunc *pFunc)
     {
-        std::stringbuf buf;
-        std::ostream out(&buf);
+        RPCStream out(pFunc->dataSize + 128);
         out << (*pFunc);
-        std::string sendStr = buf.str();        
+        std::string sendStr(out.vectorSize.data(),out.vectorSize.size());      
         m_pNet->sendData((int)MSG_FUNCRETURN,sendStr.c_str(),(int)sendStr.size(),pFunc->clientID);    
     }    
 
     bool ObjectManager::sendFuncCall(NetFunc *pFunc)
     {
-        std::stringbuf buf;
-        std::ostream out(&buf);
+        //std::stringbuf buf;
+        RPCStream out(pFunc->dataSize + 128);
         out << (*pFunc);
-        std::string sendStr = buf.str();        
+        std::string sendStr(out.vectorSize.data(),out.vectorSize.size());        
         m_pNet->sendData((int)MSG_CALLFUNC,sendStr.c_str(),(int)sendStr.size(),pFunc->clientID);
 
     }
@@ -90,10 +89,10 @@ namespace superrpc
         pObject->m_bNetObject = true;
         pObject->setObjectManager(this);
         m_mapObject[pObject->m_objectID] = pObject;
-        std::stringbuf buf;
-        std::ostream out(&buf);
+        //std::stringbuf buf;
+        RPCStream out(64);
         out << (*pObject);
-        std::string sendStr = buf.str();
+        std::string sendStr(out.vectorSize.data(),out.vectorSize.size());
         m_pNet->sendData((int)MSG_REGISTEROBJECT,sendStr.c_str(),(int)sendStr.size(),pObject->m_clientID);
 
     }

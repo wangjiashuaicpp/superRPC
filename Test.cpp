@@ -28,21 +28,34 @@ public:
 			p.set_value(100); 
 			return p.get_future();
 		}
+
+	virtual void addEncodeData(const char *pData,std::size_t size){
+
+		std::string str(pData,size);
+		m_call(str);	
+	};
+
+	virtual void setCall(superrpc::RPCObjectCall call){
+		m_call = call;
+	}
+	superrpc::RPCObjectCall m_call;
+
 	std::string m_Name;
 };
 
-class CallServer
-{
-public:
-	virtual void onOK(std::string &arg) {}
-};
 
 SUPER_CLASS_BEGIN(User)
 SUPER_FUNC_STRING(getName)
 SUPER_FUNC_STRING(setName)
 SUPER_FUNC_VOID(excSome)
 SUPER_FUNC_LONG(getLong)
+SUPER_FUNC_CALL(setCall)
+SUPER_FUNC_PCHAR_SIZE(addEncodeData)
+
 SUPER_CLASS_END(User)
+
+
+
 
 int main(int argc, char *argv[]) {
 	//init main 
@@ -68,6 +81,12 @@ int main(int argc, char *argv[]) {
 	if(str2.size()){
 		std::cout << "dsf" << std::endl;
 	}
+
+	superrpc::RPCObjectCall rpccall([](std::string& data){
+		std::cout << data << " " << data.size() << std::endl;
+	});
+	user->setCall(rpccall);
+	user->addEncodeData("123sfdsfsfsfsfsf",3);
 	while (1)
 	{
 		std::this_thread::sleep_for(std::chrono::seconds(5));

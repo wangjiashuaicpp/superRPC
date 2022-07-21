@@ -4,19 +4,34 @@
 namespace superrpc
 {
 
-    std::ostream & operator<<( std::ostream & os,const RPCObject & c)
+    RPCStream & operator<<( RPCStream& os,const RPCObject & c)
     {
-        os << c.m_objectID << std::endl;
-        os << c.m_clientID << std::endl;
-        os << c.m_className << std::endl;
+        os << c.m_objectID;
+        os << c.m_clientID ;
+        os << c.m_className;
         return os;
     }
 
-    std::istream & operator>>( std::istream & is,RPCObject & c)
+    RPCStream & operator>>( RPCStream & is,RPCObject & c)
     {
         is >> c.m_objectID;
         is >> c.m_clientID;
         is >> c.m_className;
+        return is;
+    }
+    RPCStream & operator<<( RPCStream & os,const RPCObjectCall & c)
+    {
+        const RPCObject *pObject = &c;
+        os << *pObject ;
+        os << c.m_strCallAddress;
+        return os;
+    }
+
+    RPCStream & operator>>( RPCStream & is,RPCObjectCall & c)
+    {
+        RPCObject *pObject = &c;
+        is >> (*pObject);
+        is >> c.m_strCallAddress;
         return is;
     }
 
@@ -43,11 +58,19 @@ namespace superrpc
 
     void RPCObject::onNetFunc(NetFunc *pFunc)
     {
-        auto func = m_mapNetfunc.find(pFunc->strName);
-        if(func == m_mapNetfunc.end()){
-            return;
+        if(pFunc->bCall){
+            char* str;
+            long i = strtol(pFunc->strName.c_str(), &str, 16);
+            std::function<void(std::string&)> *pCall = (std::function<void(std::string&)> *)i;
+            (*pCall)(pFunc->data);
         }
-        func->second(pFunc);
+        else{
+            auto func = m_mapNetfunc.find(pFunc->strName);
+            if(func == m_mapNetfunc.end()){
+                return;
+            }
+            func->second(pFunc);
+        }
     }
 
     void RPCObject::onNetReturn(NetFunc *pFunc)
@@ -73,6 +96,7 @@ namespace superrpc
         funcinfo.strName = name;
         funcinfo.clientID = m_clientID;
         funcinfo.data = arg;
+        funcinfo.dataSize = arg.size();
 
         m_mapReturnFunc[funcinfo.index] = func;
         //SendFuncCall(&funcinfo);
@@ -95,6 +119,20 @@ namespace superrpc
         funcinfo.dataSize = arg.size();
         //SendFuncReturn(&funcinfo);
         m_pManager->sendFuncReturn(&funcinfo);
+    }
+
+    void RPCObject::sendCallData(std::string callAddress,std::string& arg)
+    {
+        NetFunc funcinfo;
+        funcinfo.objectID = m_objectID;
+        funcinfo.index = 0;
+        funcinfo.clientID = m_clientID;
+        funcinfo.data = arg;
+        funcinfo.strName = callAddress;
+        funcinfo.dataSize = arg.size();
+        funcinfo.bCall = true;
+        //SendFuncReturn(&funcinfo);
+        m_pManager->sendFuncCall(&funcinfo);
     }
 
     static std::int64_t g_objectID = 0;
@@ -129,6 +167,17 @@ namespace superrpc
         }
 
         return nullptr;
+    }
+
+
+    void RPCObjectCall::call(std::string& data)
+    {
+        if(this->m_bNetObject){
+            this->sendData(__func__,[](superrpc::NetFunc *pArg){},data);;
+        }
+        else{
+
+        }
     }
 };
 
