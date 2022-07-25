@@ -61,7 +61,7 @@ namespace superrpc
         if(pFunc->bCall){
             char* str;
             long i = strtol(pFunc->strName.c_str(), &str, 16);
-            std::function<void(std::string&)> *pCall = (std::function<void(std::string&)> *)i;
+            std::function<void(std::vector<char>&)> *pCall = (std::function<void(std::vector<char>&)> *)i;
             (*pCall)(pFunc->data);
         }
         else{
@@ -88,7 +88,7 @@ namespace superrpc
         m_funcindex++;
         return m_funcindex;
     }
-    void RPCObject::sendData(const char* name, NETFUNC func,std::string &arg)
+    void RPCObject::sendData(const char* name, NETFUNC func,std::vector<char>& arg)
     {
         NetFunc funcinfo;
         funcinfo.objectID = m_objectID;
@@ -102,13 +102,8 @@ namespace superrpc
         //SendFuncCall(&funcinfo);
         m_pManager->sendFuncCall(&funcinfo);
     }
-
-    void RPCObject::sendData(const char* name, NETFUNC func,std::vector<char> arg)
-    {
-
-    }
-
-    void RPCObject::sendReturnData(std::int64_t index,std::string &arg)
+    
+    void RPCObject::sendReturnData(std::int64_t index,std::vector<char>& arg)
     {
         NetFunc funcinfo;
         funcinfo.objectID = m_objectID;
@@ -121,7 +116,7 @@ namespace superrpc
         m_pManager->sendFuncReturn(&funcinfo);
     }
 
-    void RPCObject::sendCallData(std::string callAddress,std::string& arg)
+    void RPCObject::sendCallData(std::string callAddress,std::vector<char>& arg)
     {
         NetFunc funcinfo;
         funcinfo.objectID = m_objectID;
@@ -173,7 +168,7 @@ namespace superrpc
     void RPCObjectCall::call(std::string& data)
     {
         if(this->m_bNetObject){
-            this->sendData(__func__,[](superrpc::NetFunc *pArg){},data);;
+            //this->sendData(__func__,[](superrpc::NetFunc *pArg){},data);;
         }
         else{
 

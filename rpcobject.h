@@ -62,7 +62,17 @@ namespace superrpc
             memcpy(vectorSize.data() + index,&c,sizeof(c));
             index += sizeof(c);
             return *this;
-        }        
+        }    
+        RPCStream& operator<<(const std::vector<char> &c)
+        {
+            std::int64_t strsize = c.size();
+            memcpy(vectorSize.data() + index,&strsize,sizeof(strsize));
+            index+= sizeof(strsize);
+
+            memcpy(vectorSize.data() + index,c.data(),c.size());
+            index += c.size();
+            return *this;
+        }              
         ////////////////////////////     
 
 
@@ -90,6 +100,20 @@ namespace superrpc
             index += c.size();
             return *this;
         }  
+        RPCStream& operator >> (std::vector<char>& c)
+        {
+            std::int64_t strsize = 0;
+            memcpy(&strsize,vectorSize.data() + index,sizeof(strsize));
+            index += sizeof(strsize);
+            auto pchar = new char[strsize];
+            memcpy(pchar,vectorSize.data() + index,strsize);
+
+            c.resize(strsize);
+            memcpy(c.data(),pchar,strsize);
+            delete []pchar;
+            index += c.size();
+            return *this;
+        }          
         RPCStream& operator>>(bool& c)
         {
             memcpy(&c,vectorSize.data() + index,sizeof(c));
@@ -104,6 +128,20 @@ namespace superrpc
         } 
     };
     
+    inline std::vector<char> LongToVChar(std::int64_t v)
+    {
+        std::vector<char> temp;
+        temp.resize(sizeof(v));
+        memcpy(temp.data(),&v,sizeof(v));
+        return temp;
+    }
+
+    inline std::int64_t VCharToLong(std::vector<char>& v)
+    {
+        std::int64_t value = 0;
+        memcpy(&value,v.data(),sizeof(value));
+        return value;
+    }
     struct NetFunc
     {
 
@@ -111,14 +149,21 @@ namespace superrpc
         std::int64_t objectID;
         std::string strName;
         std::string clientID;
-        std::string data;
+        std::vector<char>  data;
         int dataSize;
         bool bCall = false;
         friend RPCStream & operator<<( RPCStream & os,const NetFunc & c);
 	    friend RPCStream & operator>>( RPCStream & is,NetFunc & c);
 
-        std::int64_t toLong(){return std::atoll(data.c_str());}
-        void    packLong(std::int64_t arg){data = std::to_string(arg);dataSize = data.size();}
+        std::int64_t toLong(){
+            return std::atoll(data.data());
+        }
+        void    packLong(std::int64_t arg){
+            auto strdata = std::to_string(arg);
+            data.resize(strdata.size());
+            memcpy(data.data(),strdata.c_str(),strdata.size());
+            dataSize = data.size();
+        }
     };
     inline RPCStream & operator<<( RPCStream& os,const NetFunc & c)
     {
@@ -128,7 +173,7 @@ namespace superrpc
         os << c.clientID  ;
 
         //std::string strData(c.pData,c.dataSize);
-        os << c.data  ;
+        os << c.data ;
         os << c.dataSize  ;
         os << c.bCall ;
 
@@ -157,13 +202,12 @@ namespace superrpc
         ~RPCObject();
 
         std::int64_t getNewFuncIndex();
-        void sendData(const char* name, NETFUNC func,std::string &arg);
-        void sendData(const char* name, NETFUNC func,std::vector<char> arg);
+        void sendData(const char* name, NETFUNC func,std::vector<char>& arg);
         void onNetFunc(NetFunc *pFunc);
         void onNetReturn(NetFunc *pFunc);
         void init();
-        void sendReturnData(std::int64_t index,std::string &arg);
-        void sendCallData(std::string callAddress,std::string& arg);
+        void sendReturnData(std::int64_t index,std::vector<char>& arg);
+        void sendCallData(std::string callAddress,std::vector<char>& arg);
         void setObjectID(std::int64_t objectID){m_objectID = objectID;};
         void setClientID(std::string& str){m_clientID = str;};
         void addNetFunc(std::string strName,NETFUNC func){m_mapNetfunc[strName] = func;}
@@ -205,17 +249,17 @@ namespace superrpc
     {
     public:
         RPCObjectCall(){buildAddress();}
-        RPCObjectCall(const std::function<void(std::string&)> func){
-            m_funcall = std::make_shared<std::function<void(std::string&)>>();
+        RPCObjectCall(const std::function<void(std::vector<char>&)> func){
+            m_funcall = std::make_shared<std::function<void(std::vector<char>&)>>();
             (*m_funcall) = func;
             buildAddress();
         };
         ~RPCObjectCall(){};
         
         virtual void call(std::string& data);
-        RPCObjectCall & operator = (const std::function<void(std::string&)> func)
+        RPCObjectCall & operator = (const std::function<void(std::vector<char>&)> &func)
         {
-            m_funcall = std::make_shared<std::function<void(std::string&)>>();
+            m_funcall = std::make_shared<std::function<void(std::vector<char>&)>>();
             (*m_funcall) = func;
             buildAddress();
             return *this;
@@ -232,7 +276,7 @@ namespace superrpc
             //buildAddress();
             return *this;
         }            
-        bool operator ()(std::string& data) {
+        bool operator ()(std::vector<char>& data) {
             if(m_bNetObject){
                 if(m_pParent){
                     m_pParent->sendCallData(m_strCallAddress,data);
@@ -258,7 +302,7 @@ namespace superrpc
             // m_className = "RPCObjectCall";
             // m_clientID = "null";
         }
-         std::shared_ptr<std::function<void(std::string&)>> m_funcall;
+         std::shared_ptr<std::function<void(std::vector<char>&)>> m_funcall;
          std::string m_strCallAddress;
          RPCObject *m_pParent;
 
@@ -318,9 +362,11 @@ public:\
             auto ff = std::make_shared<std::promise<std::string>>();\
             auto Recdata = [this, ff](superrpc::NetFunc *pData)\
             {\
-                ff->set_value(decltype(ff->get_future().get())(pData->data));\
+                std::string str(pData->data.data(),pData->data.size());\
+                ff->set_value(decltype(ff->get_future().get())(str));\
             };\
-            this->sendData(__func__,Recdata,arg);\
+            superrpc::RPCStream out(arg.c_str(),arg.size());\   
+            this->sendData(__func__,Recdata,out.vectorSize);\
             return ff->get_future();\
         }\
         else {\
@@ -330,9 +376,11 @@ public:\
     void init##func()\
     {\
         auto netFunc = [this](superrpc::NetFunc *pArg) {\
-            std::future<std::string> ff =  super::func(pArg->data);\
+            std::string str(pArg->data.data(),pArg->data.size());\
+            std::future<std::string> ff =  super::func(str);\
             auto r = ff.get();\
-            sendReturnData(pArg->index,r);\
+            superrpc::RPCStream out(r.c_str(),r.size());\        
+            sendReturnData(pArg->index,out.vectorSize);\
         };\
         m_mapNetfunc[#func] = netFunc;\
     } \
@@ -363,8 +411,8 @@ public:\
     virtual void func()override {\
         if (m_bNetObject) {\
             auto Recdata = [](superrpc::NetFunc *pData){};\
-            std::string strArg = "";\
-            this->sendData(__func__,Recdata,strArg);\
+            std::vector<char> v;\
+            this->sendData(__func__,Recdata,v);\
         }\
         else {\
             return super::func();\
@@ -391,8 +439,9 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
             {\
                 ff->set_value(decltype(ff->get_future().get())(pData->toLong()));\
             };\
-            std::string strArg = std::to_string(arg);\
-            this->sendData(__func__,Recdata,strArg);\
+            superrpc::RPCStream out(32);\
+            out << arg; \
+            this->sendData(__func__,Recdata,out.vectorSize);\
             return ff->get_future();\
         }\
         else {\
@@ -404,8 +453,37 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
         auto netFunc = [this](superrpc::NetFunc *pArg) {\
             std::future<std::int64_t> ff =  super::func(pArg->toLong());\
             auto r = ff.get();\
-            std::string strArg = std::to_string(r);\
-            sendReturnData(pArg->index,strArg);\
+            superrpc::RPCStream input(32);\
+            input << r ;\
+            sendReturnData(pArg->index,input.vectorSize);\
+        };\
+        m_mapNetfunc[#func] = netFunc;\
+    } \
+    superrpc::ObjectRegister register##func = superrpc::ObjectRegister(this,#func,[this](){this->init##func();});
+
+#define SUPER_FUNC_VOID_LONG_LONG(func)\
+    virtual void func(std::int64_t arg,std::int64_t arg2)override {\
+        if (m_bNetObject) {\
+            auto Recdata = [this](superrpc::NetFunc *pData)\
+            {\
+            };\
+            superrpc::RPCStream input(32);\
+            input << arg;\
+            input << arg2;\
+            this->sendData(__func__,Recdata,input.vectorSize);\
+        }\
+        else {\
+            return super::func(arg,arg2);\
+        }\
+    }\
+    void init##func()\
+    {\
+        auto netFunc = [this](superrpc::NetFunc *pArg) {\
+            superrpc::RPCStream input(pArg->data.data(),pArg->data.size());\
+            std::int64_t arg, arg2;\
+            input >> arg;\
+            input >> arg2;\
+            super::func(arg,arg2);\
         };\
         m_mapNetfunc[#func] = netFunc;\
     } \
@@ -417,8 +495,8 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
             auto Recdata = [this](superrpc::NetFunc *pData)\
             {\
             };\
-            std::string strArg(pData,size);\
-            this->sendData(__func__,Recdata,strArg);\
+            superrpc::RPCStream  strArg(pData,size);\
+            this->sendData(__func__,Recdata,strArg.vectorSize);\
         }\
         else {\
             return super::func(pData,size);\
@@ -427,7 +505,7 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
     void init##func()\
     {\
         auto netFunc = [this](superrpc::NetFunc *pArg) {\
-            super::func(pArg->data.c_str(),pArg->dataSize);\
+            super::func(pArg->data.data(),pArg->data.size());\
         };\
         m_mapNetfunc[#func] = netFunc;\
     } \
@@ -441,8 +519,7 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
             };\
             superrpc::RPCStream out(64);\
             out << call;\
-            std::string sendStr(out.vectorSize.data(),out.vectorSize.size()); \
-            this->sendData(__func__,Recdata,sendStr);\
+            this->sendData(__func__,Recdata,out.vectorSize);\
             call.m_bNetObject = false;\
             super::func(call);\
         }\
@@ -454,7 +531,7 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
     {\
         auto netFunc = [this](superrpc::NetFunc *pArg) {\
             superrpc::RPCObjectCall call;\
-            superrpc::RPCStream buf(pArg->data.c_str(),pArg->data.size());\
+            superrpc::RPCStream buf(pArg->data.data(),pArg->data.size());\
             call.m_bNetObject = true;\
             call.m_pParent = this;\
             buf >> call;\
@@ -484,9 +561,11 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
                 auto ff = std::make_shared<std::promise<std::string>>();
                 auto Recdata = [this, ff](NetFunc *pData)
                 {
-                    ff->set_value(decltype(ff->get_future().get())(pData->data));
+                    
+                    ff->set_value(decltype(ff->get_future().get())(pData->data.data()));
                 };
-                this->sendData(__func__,Recdata,arg);
+                superrpc::RPCStream out(arg.size());
+                this->sendData(__func__,Recdata,out.vectorSize);
                 return ff->get_future();
             }
             else {
@@ -499,10 +578,12 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
         {
             std::cout << "initgetTest";
             auto netFunc = [this](NetFunc *pArg) {
-                
-                std::future<std::string> ff =  ObjectTest::getTest(pArg->data);
+                std::string str(pArg->data.data(),pArg->data.size());
+                std::future<std::string> ff =  ObjectTest::getTest(str);
                 auto r = ff.get();
-                sendReturnData(pArg->index,r);
+                superrpc::RPCStream out(32);
+                out << r;                
+                sendReturnData(pArg->index,out.vectorSize);
 
             };
             m_mapNetfunc["getTest"] = netFunc;
@@ -519,8 +600,8 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
                 //std::stringbuf buf;
                 superrpc::RPCStream out(64);
                 out << call;
-                std::string sendStr(out.vectorSize.data(),out.vectorSize.size()); 
-                this->sendData(__func__,Recdata,sendStr);
+                //std::string sendStr(out.vectorSize.data(),out.vectorSize.size()); 
+                this->sendData(__func__,Recdata,out.vectorSize);
                 call.m_bNetObject = false;
                 ObjectTest::setCall(call);
             }
@@ -534,7 +615,7 @@ superrpc::TemplateRegister<superrpc##className> templateregister##className(SUPE
             auto netFunc = [this](NetFunc *pArg) {
                 RPCObjectCall call;
                 //std::string str = pArg->data;
-                superrpc::RPCStream buf(pArg->data.c_str(),pArg->data.size());
+                superrpc::RPCStream buf(pArg->data.data(),pArg->data.size());
                 //std::istream out(&buf);
                 call.m_bNetObject = true;
                 call.m_pParent = this;
